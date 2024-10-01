@@ -22,11 +22,27 @@ def read_file_from_s3(bucket_name, path, format_type, **kwargs):
     return df
 
 def transform(df):
-    top_10 = df.groupby("Product")["Quantity Ordered"].sum().reset_index()
-    top_10 = top_10.sort_values("Quantity Ordered", ascending = False)
-    top_10 = top_10.head(10).reset_index(drop=True)
+    dates = list(filter(lambda e: not isinstance(e, str), df.columns))
+    strings = list(filter(lambda e: isinstance(e, str), df.columns))
+    dates = [dt.strftime("%Y-%m") for dt in dates]
 
-    return top_10
+    new_columns = strings + dates
+    df.columns = new_columns
+    df.iloc[0, 1] = "Nivel General"
+    df = df.drop("Unnamed: 0", axis = 1)
+    df = df.rename(columns={"Unnamed: 1": "Categoria"})
+    df = df[df["Categoria"].notnull()]
+    df = df.T
+    df.columns = df.iloc[0]
+    df = df.drop(df.index[0])
+    df = df.reset_index()
+    df.rename(columns={"index": "date"}, inplace = True)
+    df["year"] = df["date"].str.split("-").str[0]
+    df["month"] = df["date"].str.split("-").str[1]
+    df = df.drop("date", axis = 1)
+    df.to_excel("Ver ahora.xlsx", index = False)
+
+    return df
 
 def upload_to_s3(top_10):
     temppath = f"{tempfile.gettempdir()}/today.csv"
@@ -41,17 +57,15 @@ def upload_to_s3(top_10):
         region_name='us-east-1'
     )
     print("Subiendo al s3")
-    s3.upload_file(Filename=temppath, Bucket="datalake", Key=f"{year}/{month}/{day}/today.csv")
+    s3.upload_file(Filename=temppath, Bucket="datalake", Key=f"{year}/{month}/today.csv")
     print("Subido al s3")
 
 def main(event, context):
-    bucket_name = event.get("bucket_name", None)
-    path = event.get("path", None)
-    format_type = event.get("format_type", None)
+    # bucket_name = event.get("bucket_name", None)
+    # path = event.get("path", None)
+    # format_type = event.get("format_type", None)
     print("Leyendo..")
 
-    df = read_file_from_s3(bucket_name, path, format_type)
-    top_10 = transform(df)
-    upload_to_s3(top_10)
-
-    return {"bucket": bucket_name, "path": path}
+    df = read_file_from_s3("files-data", "inflation-rates/data.xlsx", "excel")
+    df = transform(df)
+    upload_to_s3(df)

@@ -1,0 +1,7 @@
+apache-airflow-providers-amazon
+apache-airflow-providers-postgres
+s3fs
+xlrd
+openpyxl
+fastparquet
+pyarrow

@@ -30,6 +30,7 @@ provider "aws" {
     sqs            = "http://localhost:4566"
     ssm            = "http://localhost:4566"
     stepfunctions  = "http://localhost:4566"
+    eventbridge   = "http://localhost:4566"
     sts            = "http://localhost:4566"
   }
 }

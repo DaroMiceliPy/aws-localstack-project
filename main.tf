@@ -61,3 +61,34 @@ resource "aws_lambda_function" "test_lambda" {
 
   runtime = "python3.10"
 }
+
+resource "aws_cloudwatch_event_rule" "s3_upload_excel" {
+  name        = "S3UploadExcel"
+  description = "Event bridge rule for upload excel to s3 bucket"
+
+  event_pattern = jsonencode({
+    "source": ["aws.s3"],
+    "detail-type": ["Object Created"],
+    "detail": {
+      "eventName": ["PutObject"],
+      "requestParameters": {
+        "bucketName": ["files-data"]
+      }
+    }
+  }) 
+}
+
+resource "aws_cloudwatch_event_target" "lambda_target" {
+  rule = aws_cloudwatch_event_rule.s3_upload_excel.name
+  target_id = "lambda_target_s3"
+  arn = aws_lambda_function.test_lambda.arn
+}
+
+resource "aws_lambda_permission" "allow_eventbridge" {
+  statement_id = "AllowExecutionFromEventBridge"
+  action = "lambda:InvokeFunction"
+  principal     = "events.amazonaws.com" 
+  function_name = aws_lambda_function.test_lambda.function_name
+  source_arn    = aws_cloudwatch_event_rule.s3_upload_excel.arn 
+}
+
