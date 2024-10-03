@@ -1,3 +1,4 @@
+![plot](./assets/diagram.jpg)
 # Setting up
 Please follow the next steps to setting up the project
 
